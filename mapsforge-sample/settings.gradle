@@ -1,0 +1,5 @@
+include ':app', ':mapsforge-map-android', ':mapsforge-core', ':mapsforge-map', ':mapsforge-map-reader'
+project(':mapsforge-core').projectDir=new File('../mapsforge-core')
+project(':mapsforge-map').projectDir=new File('../mapsforge-map')
+project(':mapsforge-map-reader').projectDir=new File('../mapsforge-map-reader')
+project(':mapsforge-map-android').projectDir=new File('../mapsforge-map-android')
