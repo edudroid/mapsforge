@@ -15,15 +15,22 @@
 package hu.edudroid.mapsforge_sample;
 
 import android.content.SharedPreferences;
+import android.preference.PreferenceManager;
 import android.util.Log;
 
+import org.mapsforge.core.model.LatLong;
+import org.mapsforge.core.model.MapPosition;
 import org.mapsforge.map.android.rendertheme.AssetsRenderTheme;
 import org.mapsforge.map.android.util.AndroidUtil;
-import org.mapsforge.map.layer.cache.TileCache;
+import org.mapsforge.map.android.util.MapViewerTemplate;
+import org.mapsforge.map.layer.renderer.TileRendererLayer;
 import org.mapsforge.map.rendertheme.XmlRenderTheme;
 import org.mapsforge.map.rendertheme.XmlRenderThemeMenuCallback;
 import org.mapsforge.map.rendertheme.XmlRenderThemeStyleLayer;
 import org.mapsforge.map.rendertheme.XmlRenderThemeStyleMenu;
+import org.mapsforge.map.scalebar.ImperialUnitAdapter;
+import org.mapsforge.map.scalebar.MetricUnitAdapter;
+import org.mapsforge.map.scalebar.NauticalUnitAdapter;
 
 import java.io.IOException;
 import java.util.Set;
@@ -32,21 +39,89 @@ import java.util.Set;
  * Standard map view with use of Rendertheme V4, loading the render theme from the Android
  * assets folder and showing a configuration menu based on the stylemenu.
  */
-public class RenderTheme4 extends SamplesBaseActivity implements XmlRenderThemeMenuCallback {
+public class RenderTheme4 extends MapViewerTemplate implements  XmlRenderThemeMenuCallback {
 
+    protected SharedPreferences sharedPreferences;
 
-	@Override
+    @Override
+    protected int getLayoutId() {
+        return R.layout.mapviewer;
+    }
+
+    @Override
+    protected int getMapViewId() {
+        return R.id.mapView;
+    }
+
+    @Override
+    protected MapPosition getDefaultInitialPosition() {
+        return new MapPosition(new LatLong(52.517037, 13.38886), (byte) 12);
+    }
+
+    @Override
+    protected void createLayers() {
+        TileRendererLayer tileRendererLayer = AndroidUtil.createTileRendererLayer(this.tileCaches.get(0),
+                mapView.getModel().mapViewPosition, getMapFile(), getRenderTheme(), false, true);
+        this.mapView.getLayerManager().getLayers().add(tileRendererLayer);
+    }
+
+    @Override
+    protected void createControls() {
+        setMapScaleBar();
+    }
+
+    protected void createTileCaches() {
+        boolean threaded = sharedPreferences.getBoolean(SamplesApplication.SETTING_TILECACHE_THREADING, true);
+        int queueSize = Integer.parseInt(sharedPreferences.getString(SamplesApplication.SETTING_TILECACHE_QUEUESIZE, "4"));
+        boolean persistent = sharedPreferences.getBoolean(SamplesApplication.SETTING_TILECACHE_PERSISTENCE, true);
+
+        this.tileCaches.add(AndroidUtil.createTileCache(this, getPersistableId(),
+                this.mapView.getModel().displayModel.getTileSize(), this.getScreenRatio(),
+                this.mapView.getModel().frameBufferModel.getOverdrawFactor(),
+                threaded, queueSize, persistent
+        ));
+    }
+
+    /**
+     * @return the map file name to be used
+     */
+    protected String getMapFileName() {
+        return "germany.map";
+    }
+
+	/*
+	 * Settings related methods.
+	 */
+
+    @Override
+    protected void createSharedPreferences() {
+        super.createSharedPreferences();
+
+        this.sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+
+        // problem that the first call to getAll() returns nothing, apparently the
+        // following two calls have to be made to read all the values correctly
+        // http://stackoverflow.com/questions/9310479/how-to-iterate-through-all-keys-of-shared-preferences
+        this.sharedPreferences.edit().clear();
+        PreferenceManager.setDefaultValues(this, R.xml.preferences, true);
+    }
+
+    /**
+     * Sets the scale bar from preferences.
+     */
+    protected void setMapScaleBar() {
+        AndroidUtil.setMapScaleBar(this.mapView, MetricUnitAdapter.INSTANCE, null);
+    }
+
+    @Override
 	protected XmlRenderTheme getRenderTheme() {
 		try {
-			return new AssetsRenderTheme(this, getRenderThemePrefix(), getRenderThemeFile(), this);
+            // Render theme prefix = ""
+			return new AssetsRenderTheme(this, "", getRenderThemeFile(), this);
 		} catch (IOException e) {
 			Log.e(SamplesApplication.TAG, "Render theme failure " + e.toString());
 		}
 		return null;
-	}
-
-	protected String getRenderThemePrefix() {
-		return "";
 	}
 
 	@Override
@@ -64,9 +139,7 @@ public class RenderTheme4 extends SamplesBaseActivity implements XmlRenderThemeM
 
 		// add the categories from overlays that are enabled
 		for (XmlRenderThemeStyleLayer overlay : baseLayer.getOverlays()) {
-			if (this.sharedPreferences.getBoolean(overlay.getId(), overlay.isEnabled())) {
-				result.addAll(overlay.getCategories());
-			}
+            result.addAll(overlay.getCategories());
 		}
 
 		return result;
@@ -74,24 +147,6 @@ public class RenderTheme4 extends SamplesBaseActivity implements XmlRenderThemeM
 
 	protected String getRenderThemeFile() {
 		return "renderthemes/rendertheme-v4.xml";
-	}
-
-
-	@Override
-	public void onSharedPreferenceChanged(SharedPreferences preferences, String key) {
-		super.onSharedPreferenceChanged(preferences, key);
-		// difficult to know which render theme options have changed since we
-		// do not know all the keys, so we just purge the caches and redraw
-		// the map whenever there is a change in the settings.
-		// TODO: for real applications it is essential to know when the style menu has
-		// changed. It would be good to find a way of identifying when a key is
-		// for the style menu.
-		Log.i(SamplesApplication.TAG, "Purging tile caches");
-
-		for (TileCache tileCache : tileCaches) {
-			tileCache.purge();
-		}
-		AndroidUtil.restartActivity(this);
 	}
 
 }

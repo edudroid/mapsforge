@@ -22,25 +22,15 @@
 		android:label="Mapsforge Samples"
         tools:replace="label">
 
-		<activity
-			android:name=".Samples">
-			<intent-filter>
-				<action android:name="android.intent.action.MAIN"/>
-				<category android:name="android.intent.category.LAUNCHER"/>
-			</intent-filter>
-		</activity>
         <activity
 			android:name=".RenderTheme4"
 			android:configChanges="keyboardHidden|orientation|screenSize"
-			android:label="RenderTheme V4"/>
-		<activity
-			android:name=".Settings"
-			android:label="Settings"
-			android:parentActivityName=".Samples">
-			<meta-data
-				android:name="android.support.PARENT_ACTIVITY"
-				android:value=".Samples"/>
-		</activity>
+			android:label="RenderTheme V4">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
 
 	</application>
 
